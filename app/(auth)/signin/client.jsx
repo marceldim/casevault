@@ -192,8 +192,8 @@ const Client = () => {
                 <div className="mt-6 space-y-3">
 
                     <button
-                        onClick={handleGoogleSignIn}
-                        disabled={loading}
+                        //onClick={handleGoogleSignIn}
+                        disabled
                         className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] transition cursor-pointer hover:opacity-70 duration-300 disabled:opacity-50"
                     >
                         <FcGoogle className="text-xl" />
