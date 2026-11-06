@@ -23,13 +23,38 @@ const font = Denk_One({
     weight: ["400"],
 });
 
-const Client = () => {
+const inputClass =
+    "w-full rounded-md border border-gray-400 bg-transparent px-3 py-2.5 text-base sm:text-sm text-[#f5f5f5] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#55fff6]";
 
+const socialBtnClass =
+    "w-full flex items-center justify-center gap-2 rounded-full bg-[#f5f5f5] py-2.5 text-sm font-semibold opacity-60 cursor-not-allowed";
+
+const getErrorMessage = (code) => {
+    switch (code) {
+        case "auth/invalid-credential":
+        case "auth/wrong-password":
+            return "Invalid email or password.";
+        case "auth/user-not-found":
+            return "No account found with this email.";
+        case "auth/invalid-email":
+            return "Please enter a valid email address.";
+        case "auth/too-many-requests":
+            return "Too many attempts. Please wait a moment and try again.";
+        case "auth/network-request-failed":
+            return "Network error. Check your connection and try again.";
+        default:
+            return "Something went wrong. Please try again.";
+    }
+};
+
+const Client = () => {
     const router = useRouter();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
     const createUserDocument = async (user) => {
         await setDoc(
             doc(db, "users", user.uid),
@@ -38,16 +63,18 @@ const Client = () => {
                 email: user.email,
                 displayName: user.displayName || "",
                 photoURL: user.photoURL || "",
-                createdAt: serverTimestamp(),
+                lastLoginAt: serverTimestamp(),
             },
             { merge: true }
         );
     };
 
-    const handleEmailSignIn = async () => {
+    const handleEmailSignIn = async (e) => {
+        e.preventDefault();
+        setError("");
 
         if (!email || !password) {
-            alert("Please enter your email and password.");
+            setError("Please enter your email and password.");
             return;
         }
 
@@ -63,62 +90,42 @@ const Client = () => {
             await createUserDocument(result.user);
 
             router.push("/");
-
-        } catch (error) {
-
-            console.error(error);
-
-            if (error.code === "auth/invalid-credential") {
-                alert("Invalid email or password.");
-            } else if (error.code === "auth/user-not-found") {
-                alert("No account found with this email.");
-            } else if (error.code === "auth/wrong-password") {
-                alert("Incorrect password.");
-            } else {
-                alert("Something went wrong. Please try again.");
-            }
-
+        } catch (err) {
+            console.error(err);
+            setError(getErrorMessage(err.code));
         } finally {
             setLoading(false);
         }
     };
 
+    // Kept for when you enable Google sign-in
     const handleGoogleSignIn = async () => {
+        setError("");
 
         try {
-
             setLoading(true);
 
-            const result = await signInWithPopup(
-                auth,
-                googleProvider
-            );
+            const result = await signInWithPopup(auth, googleProvider);
 
-            const user = result.user;
-
-            await createUserDocument(user);
+            await createUserDocument(result.user);
 
             router.push("/");
-
-        } catch (error) {
-
-            console.error(error);
-            alert("Google sign-in failed.");
-
+        } catch (err) {
+            console.error(err);
+            setError("Google sign-in failed.");
         } finally {
             setLoading(false);
         }
     };
 
-
     return (
-        <main className="min-h-screen md:min-h-dvh md:min-w-dvw flex items-center justify-center bg-[#233D4C] md:px-30 overflow-hidden w-full">
+        <main className="min-h-dvh w-full flex items-center justify-center bg-[#233D4C] px-4 py-8 sm:px-6">
 
-            <div className="md:min-w-md p-4 md:p-8">
+            <div className="w-full max-w-md sm:p-8">
 
                 {/* Logo */}
                 <h1
-                    className={`text-xl font-semibold text-[#f5f5f5] md:text-3xl ${font.className} antialiased text-center`}
+                    className={`text-2xl sm:text-3xl font-semibold text-[#f5f5f5] ${font.className} antialiased text-center`}
                 >
                     Case<span className="font-bold">Vault</span>
                 </h1>
@@ -127,123 +134,113 @@ const Client = () => {
                     Sign in to your account
                 </p>
 
+                <form onSubmit={handleEmailSignIn} noValidate>
 
-                {/* Email */}
-                <div>
+                    {/* Email */}
+                    <div>
+                        <label
+                            htmlFor="email"
+                            className="block text-sm text-[#f5f5f5] mb-1 mt-5 font-semibold"
+                        >
+                            Email address
+                        </label>
 
-                    <label className="block text-sm text-[#f5f5f5] mb-1 mt-5 font-semibold">
-                        Email address
-                    </label>
+                        <input
+                            id="email"
+                            type="email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="you@email.com"
+                            className={inputClass}
+                        />
+                    </div>
 
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@email.com"
-                        className="w-full border border-gray-400 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#55fff6] placeholder-gray-400 text-[#f5f5f5]"
-                    />
+                    {/* Password */}
+                    <div>
+                        <label
+                            htmlFor="password"
+                            className="block text-sm text-[#f5f5f5] mb-1 mt-4 font-semibold"
+                        >
+                            Password
+                        </label>
 
-                </div>
+                        <input
+                            id="password"
+                            type="password"
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            className={inputClass}
+                        />
+                    </div>
 
+                    {/* Error */}
+                    {error && (
+                        <p role="alert" className="mt-4 text-sm text-red-300">
+                            {error}
+                        </p>
+                    )}
 
-                {/* Password */}
-                <div>
+                    {/* Email Sign In */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full mt-4 rounded-md py-2.5 text-sm font-medium bg-[#F97316] text-[#f5f5f5] transition hover:opacity-70 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? "Signing in..." : "Continue with Email"}
+                    </button>
 
-                    <label className="block text-sm text-[#f5f5f5] mb-1 mt-4 font-semibold">
-                        Password
-                    </label>
-
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
-                        className="w-full border border-gray-400 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#55fff6] placeholder-gray-400 text-[#f5f5f5]"
-                    />
-
-                </div>
-
-
-                {/* Email Sign In */}
-                <button
-                    onClick={handleEmailSignIn}
-                    disabled={loading}
-                    className="w-full mt-4 rounded-md py-2 text-sm font-medium bg-[#F97316] text-[#f5f5f5] transition hover:opacity-70 cursor-pointer disabled:opacity-50"
-                >
-                    {loading ? "Signing in..." : "Continue with Email"}
-                </button>
-
+                </form>
 
                 {/* Divider */}
                 <div className="flex items-center my-6">
-
-                    <div className="flex-grow border-t border-gray-600"></div>
-
-                    <span className="mx-3 text-sm text-[#f5f5f5]">
-                        or
-                    </span>
-
-                    <div className="flex-grow border-t border-gray-600"></div>
-
+                    <div className="grow border-t border-gray-600"></div>
+                    <span className="mx-3 text-sm text-[#f5f5f5]">or</span>
+                    <div className="grow border-t border-gray-600"></div>
                 </div>
 
-
-                {/* Google */}
-                <div className="mt-6 space-y-3">
+                {/* Social */}
+                <div className="space-y-3">
 
                     <button
+                        type="button"
                         //onClick={handleGoogleSignIn}
                         disabled
-                        className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] transition cursor-pointer hover:opacity-70 duration-300 disabled:opacity-50 cursor-not-allowed"
+                        className={socialBtnClass}
                     >
                         <FcGoogle className="text-xl" />
-
-                        <p className="text-[#233D4C]">
+                        <span className="text-[#233D4C]">
                             Continue with Google
-                        </p>
+                        </span>
                     </button>
 
-
-                    {/* Apple */}
-                    <button
-                        disabled
-                        className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] opacity-60 cursor-not-allowed"
-                    >
+                    <button type="button" disabled className={socialBtnClass}>
                         <TiVendorApple className="text-xl" />
-
-                        <p className="text-[#233D4C]">
+                        <span className="text-[#233D4C]">
                             Continue with Apple
-                        </p>
+                        </span>
                     </button>
 
-
-                    {/* GitHub */}
-                    <button
-                        disabled
-                        className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] opacity-60 cursor-not-allowed"
-                    >
+                    <button type="button" disabled className={socialBtnClass}>
                         <FaGithub className="text-xl" />
-
-                        <p className="text-[#233D4C]">
+                        <span className="text-[#233D4C]">
                             Continue with GitHub
-                        </p>
+                        </span>
                     </button>
 
                 </div>
-
 
                 {/* Footer */}
                 <p className="text-sm text-[#f5f5f5] text-center mt-6">
-
-                    Don't have an account?{" "}
-
+                    Don&apos;t have an account?{" "}
                     <Link
                         href="/signup"
-                        className="text-secondary hover:text-amber-500 cursor-pointer hover:underline duration-200"
+                        className="text-[#F97316] hover:text-amber-500 hover:underline duration-200"
                     >
                         Sign up
                     </Link>
-
                 </p>
 
             </div>
