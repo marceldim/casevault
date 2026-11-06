@@ -194,7 +194,7 @@ const Client = () => {
                     <button
                         //onClick={handleGoogleSignIn}
                         disabled
-                        className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] transition cursor-pointer hover:opacity-70 duration-300 disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold bg-[#f5f5f5] transition cursor-pointer hover:opacity-70 duration-300 disabled:opacity-50 cursor-not-allowed"
                     >
                         <FcGoogle className="text-xl" />
 
