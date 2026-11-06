@@ -1,11 +1,12 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { FaRegUserCircle } from "react-icons/fa";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { Denk_One } from 'next/font/google';
-import { useSession, signOut } from 'next-auth/react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '@/config/firebase';
 import ThemeDialog from '../ThemeDialog';
 
 // MUI
@@ -35,9 +36,17 @@ const font = Denk_One({
 
 const Navbar = () => {
 
-    const { data: session } = useSession();
+    const [user, setUser] = useState(null);
     const router = useRouter();
     const pathname = usePathname();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     // LEFT drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -102,13 +111,14 @@ const Navbar = () => {
                         </Link>
                     ))}
                 </div>
+                <div></div>
 
                 {/* User */}
                 <div className='flex items-center'>
-                    {session ? (
+                    {user ? (
                         <Avatar
-                            alt={session?.user?.name}
-                            src={session?.user?.image}
+                            alt={user?.displayName || user?.email}
+                            src={user?.photoURL || ""}
                             sx={{ width: 36, height: 36 }}
                             className='cursor-pointer'
                             onClick={toggleRightDrawer(true)}
@@ -184,18 +194,18 @@ const Navbar = () => {
 
                         {/* User Info */}
                         <div className="p-4 border-b border-gray-300 flex items-center gap-3 dark:border-gray-500">
-                            {session ? (
+                            {user ? (
                                 <>
                                     <Avatar
-                                        src={session?.user?.image}
-                                        alt={session?.user?.name}
+                                        src={user?.photoURL || ""}
+                                        alt={user?.displayName || user?.email}
                                     />
                                     <div>
                                         <p className="text-sm font-semibold">
-                                            {session?.user?.name}
+                                            {user?.displayName}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {session?.user?.email}
+                                            {user?.email}
                                         </p>
                                     </div>
                                 </>
@@ -244,18 +254,25 @@ const Navbar = () => {
                                     </ListItem>
                                 );
                             })}
-                            
-                                                <ThemeDialog open={openTheme} onClose={() => setOpenTheme(false)}/>
-                        </List>
 
+                            <ThemeDialog open={openTheme} onClose={() => setOpenTheme(false)} />
+                        </List>
                         {/* Logout */}
-                        {session && (
-                            <div className="mt-auto p-4 border-t border-gray-300 dark:border-gray-500">
+                        {user && (
+                            <div className="mt-auto p-4 border-t border-gray-300 dark:border-gray-500 cursor-pointer">
                                 <div className='flex gap-3 items-center'>
                                     <Logout />
                                     <button
-                                        onClick={() => signOut()}
-                                        className="text-sm text-red-500"
+                                        onClick={async () => {
+                                            try {
+                                                await signOut(auth);
+                                                setRightDrawerOpen(false);
+                                                router.push("/");
+                                            } catch (error) {
+                                                console.error(error);
+                                            }
+                                        }}
+                                        className="text-sm text-red-500 cursor-pointer"
                                     >
                                         Sign Out
                                     </button>

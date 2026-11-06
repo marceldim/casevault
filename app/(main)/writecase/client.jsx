@@ -1,15 +1,34 @@
 "use client";
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FaPaperPlane } from 'react-icons/fa6';
 import * as Yup from 'yup';
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from '@/config/firebase';
 import { LuLoaderCircle } from "react-icons/lu";
 import Snackbar from '@mui/material/Snackbar';
+import { useRouter } from "next/navigation"
+import { onAuthStateChanged } from "firebase/auth"
+import { auth, db } from '@/config/firebase';
 
-const Client = ({ session }) => {
+const Client = () => {
+    const router = useRouter()
+
+    const [user, setUser] = useState(null)
+    const [authLoading, setAuthLoading] = useState(true)
     const [sending, setSending] = useState(false)
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (!currentUser) {
+                router.push("/signin")
+                return
+            }
+
+            setUser(currentUser)
+            setAuthLoading(false)
+        })
+
+        return () => unsubscribe()
+    }, [router])
     const [state, setState] = React.useState({
         open: false,
         vertical: 'top',
@@ -38,6 +57,17 @@ const Client = ({ session }) => {
         description: Yup.string().required("This is a required field"),
         privacy: Yup.string().required("Select visibility")
     })
+    //firebase protection
+    if (authLoading) {
+        return (
+            <main className="min-h-dvh flex items-center justify-center">
+                <LuLoaderCircle className="animate-spin text-2xl" />
+            </main>
+        )
+    }
+    if (!user) {
+        return null
+    }
     return (
         <main className="min-h-dvh bg-[url('/case-bg.jpg')] bg-no-repeat bg-center bg-cover">
             <section className='bg-[#0F172A]/50 min-h-dvh'>
@@ -53,16 +83,16 @@ const Client = ({ session }) => {
                         <Formik
                             initialValues={iv} validationSchema={formValidation}
                             onSubmit={async (values, { resetForm }) => {
-                                if (!session) {
+                                if (!user) {
                                     alert("You must be logged in to post")
                                     return
                                 }
                                 const dbObject = {
                                     ...values,
                                     createdAt: serverTimestamp(),
-                                    userId: session?.user?.id,
-                                    image: session?.user?.image || "",
-                                    author: session?.user?.name || "Anonymous",
+                                    userId: user.uid,
+                                    image: user.photoUrl || "",
+                                    author: user.displayName || "Anonymous",
                                     likesCount: 0,
                                 }
                                 try {
@@ -72,12 +102,12 @@ const Client = ({ session }) => {
                                     console.log(dbObject);
                                     handleClick({ vertical: 'top', horizontal: 'right' })
 
-                                }catch (error) {
-                                        console.error("FULL ERROR:", error);
-                                        alert(error.message)
-                                    }
+                                } catch (error) {
+                                    console.error("FULL ERROR:", error);
+                                    alert(error.message)
+                                }
 
-                                 finally {
+                                finally {
                                     setSending(false)
                                 }
                                 resetForm();

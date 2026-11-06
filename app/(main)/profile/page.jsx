@@ -1,16 +1,10 @@
-import { auth } from '@/auth'
-import { redirect } from 'next/navigation'
 import React from 'react'
 import Client from './client'
 
-const page = async () => {
-  const session = await auth()
-  if (!session) {
-   redirect("/signin")
-  }
+const page = () => {
   return (
     <div>
-      <Client session={session}/>
+      <Client/>
     </div>
   )
 }

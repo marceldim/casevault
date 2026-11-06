@@ -1,10 +1,10 @@
 "use client"
 import Avatar from "@mui/material/Avatar";
-import { signOut } from "next-auth/react";
 import { MdModeEdit } from "react-icons/md";
 import React, { useEffect, useState } from "react"
+import { onAuthStateChanged } from "firebase/auth"
 import { collection, query, where, getDocs, doc, deleteDoc, getDoc, setDoc, updateDoc, increment } from "firebase/firestore"
-import { db } from "@/config/firebase"
+import { auth, db } from "@/config/firebase"
 import CircularProgress from "@mui/material/CircularProgress"
 import Snackbar from "@mui/material/Snackbar"
 import MuiAlert from "@mui/material/Alert"
@@ -23,8 +23,9 @@ const num = Montserrat({
     weight: ["700"],
 })
 
-const page = ({ session }) => {
-    const uid = session?.user?.id
+const page = () => {
+    const [user, setUser] = useState(null)
+    const [uid, setUid] = useState(null)
 
     const [cases, setCases] = useState([])
     const [loading, setLoading] = useState(true)
@@ -33,6 +34,14 @@ const page = ({ session }) => {
     const handleClose = () => setSnackOpen(false)
     const [likedCases, setLikedCases] = useState({})
 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser)
+            setUid(currentUser?.uid || null)
+        })
+
+        return () => unsubscribe()
+    }, [])
     useEffect(() => {
         const fetchVaultCases = async () => {
             try {
@@ -80,6 +89,7 @@ const page = ({ session }) => {
         if (!uid) return
 
     }, [uid])
+
     const toggleLike = async (caseId) => {
         try {
             if (!uid) return alert("Login first")
@@ -171,7 +181,7 @@ const page = ({ session }) => {
                 <div className='flex items-center md:gap-8 max-md:flex-col'>
                     {/* Header */}
                     <div className="flex flex-col items-center text-center">
-                        <Avatar alt={session?.user?.name} src={session?.user?.image} sx={{
+                        <Avatar alt={user?.displayName} src={user?.photoUrl} sx={{
                             width: { xs: 100, sm: 120, md: 200 },
                             height: { xs: 100, sm: 120, md: 200 },
                         }} className='' />
@@ -180,12 +190,12 @@ const page = ({ session }) => {
                         <div className='flex items-center md:gap-3 max-md:flex-col'>
                             <div className="max-md:flex items-center gap-2">
                                 <h1 className="md:text-2xl font-bold md:mt-4 text-[#233D4C] text-lg mt-1">
-                                    {session.user.name}
+                                    {user?.displayName || "CaseVault User"}
                                 </h1>
                                 <p className="md:hidden px-3 py-1 bg-gray-200 rounded-full font-semibold text-sm">Edit</p>
                             </div>
                             <div>
-                                <p className="text-[#233D4C] font-semibold md:mt-5 text-sm md:text-md">{session.user.email}</p>
+                                <p className="text-[#233D4C] font-semibold md:mt-5 text-sm md:text-md">{user?.email}</p>
                             </div>
                         </div>
                         <div>

@@ -4,6 +4,9 @@ const page = async () => {
     const session = await auth()
     return (
         <main className='max-md:text-sm md:text-base'>
+            <div className="bg-white dark:bg-black text-black dark:text-white min-h-screen hidden">
+                TEST
+            </div>
             {/* HERO */}
             <section className="bg-[url('/tech.bg.jpg')] bg-no-repeat bg-center bg-cover bg-fixed">
                 <div className="bg-[#233D4C]/50 text-white min-h-screen">
