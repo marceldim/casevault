@@ -178,7 +178,7 @@ const Client = () => {
 
                     {/* Error */}
                     {error && (
-                        <p role="alert" className="mt-4 text-sm text-red-300">
+                        <p role="alert" className="mt-2 text-sm text-red-300">
                             {error}
                         </p>
                     )}

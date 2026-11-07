@@ -1,13 +1,8 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import React from "react";
 import Client from "./client";
 
-export default async function Page() {
-    const session = await auth();
-
-    if (session) {
-        redirect("/");
-    }
-
+const page = () => {
     return <Client />;
-}
+};
+
+export default page;
